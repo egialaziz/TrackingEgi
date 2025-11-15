@@ -166,9 +166,9 @@ export default function Page() {
           <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold">📦</span>
           </div>
-          Tracking Pengiriman
+          Tracking Pengiriman Egi
         </h1>
-        <p className="text-slate-400">Kelola dan pantau semua pengiriman Anda</p>
+        <p className="text-slate-400">Kelola dan pantau semua pengiriman Egi</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
