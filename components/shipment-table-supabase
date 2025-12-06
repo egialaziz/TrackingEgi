@@ -1,0 +1,142 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Button } from '@/components/ui/button'
+import { Trash2, Edit2, CheckCircle2, XCircle } from 'lucide-react'
+
+export default function ShipmentTableSupabase({ 
+  searchQuery,
+  statusFilter,
+  onEdit,
+  openConfirmModal
+}: any) {
+
+  const supabase = createClientComponentClient()
+  const [shipments, setShipments] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // --- FETCH DATA DARI SUPABASE ---
+  const fetchShipments = async () => {
+    setLoading(true)
+
+    let query = supabase.from('shipments').select('*').order('created_at', { ascending: false })
+
+    if (statusFilter !== 'all') {
+      query = query.eq('status', statusFilter)
+    }
+
+    const { data, error } = await query
+
+    if (error) console.error(error)
+    else setShipments(data || [])
+
+    setLoading(false)
+  }
+
+  // --- LOAD SAAT MOUNT ---
+  useEffect(() => { fetchShipments() }, [statusFilter])
+
+  // --- REALTIME UPDATE (opsional) ---
+  useEffect(() => {
+    const channel = supabase
+      .channel('shipments-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shipments' }, () => {
+        fetchShipments()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
+
+  // --- DELETE DATA ---
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('shipments').delete().eq('id', id)
+    if (error) alert('Gagal menghapus data')
+  }
+
+  // --- SEARCH FILTER ---
+  const filtered = shipments.filter(item =>
+    item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.penerima?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.po?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.branch?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  return (
+    <div className="overflow-x-auto">
+      {loading ? (
+        <p className="text-slate-400 text-center py-4">Loading...</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-slate-400 text-center py-4">Tidak ada data ditemukan</p>
+      ) : (
+        <table className="w-full text-sm text-slate-300">
+          <thead>
+            <tr className="border-b border-slate-700">
+              <th className="py-3 px-2 text-left">Deskripsi</th>
+              <th className="py-3 px-2 text-left">Qty</th>
+              <th className="py-3 px-2 text-left">Penerima</th>
+              <th className="py-3 px-2 text-left">PO</th>
+              <th className="py-3 px-2 text-left">Branch</th>
+              <th className="py-3 px-2 text-left">Status</th>
+              <th className="py-3 px-2">Aksi</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filtered.map((shipment) => (
+              <tr key={shipment.id} className="border-b border-slate-800 hover:bg-slate-700/20 transition">
+                <td className="py-3 px-2">{shipment.description}</td>
+                <td className="py-3 px-2">{shipment.qty}</td>
+                <td className="py-3 px-2">{shipment.penerima}</td>
+                <td className="py-3 px-2">{shipment.po}</td>
+                <td className="py-3 px-2">{shipment.branch}</td>
+                <td className="py-3 px-2">
+                  {shipment.status === 'pending' && (
+                    <span className="text-yellow-400 font-medium">Pending</span>
+                  )}
+                  {shipment.status === 'confirmed' && (
+                    <span className="text-emerald-400 font-medium">Dikonfirmasi</span>
+                  )}
+                  {shipment.status === 'rejected' && (
+                    <span className="text-red-400 font-medium">Ditolak</span>
+                  )}
+                </td>
+
+                <td className="py-3 px-2 flex gap-2 justify-center">
+                  
+                  {/* KONFIRMASI */}
+                  {shipment.status === 'pending' && (
+                    <button
+                      onClick={() => openConfirmModal(shipment)}
+                      className="text-emerald-400 hover:text-emerald-300"
+                    >
+                      <CheckCircle2 size={18} />
+                    </button>
+                  )}
+
+                  {/* EDIT */}
+                  <button
+                    onClick={() => onEdit(shipment)}
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    <Edit2 size={18} />
+                  </button>
+
+                  {/* DELETE */}
+                  <button
+                    onClick={() => handleDelete(shipment.id)}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
