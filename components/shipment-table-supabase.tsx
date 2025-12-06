@@ -1,89 +1,87 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import { Trash2, Edit2, CheckCircle2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-interface ShipmentTableProps {
-  searchQuery: string
-  statusFilter: string
-  onEdit: (shipment: any) => void
-  openConfirmModal: (shipment: any) => void
+interface Shipment {
+  id: number;
+  name: string;
+  origin: string;
+  destination: string;
+  status: string;
+  created_at: string;
+}
+
+interface Props {
+  searchQuery: string;
+  statusFilter: string;
 }
 
 export default function ShipmentTableSupabase({
   searchQuery,
   statusFilter,
-  onEdit,
-  openConfirmModal,
-}: ShipmentTableProps) {
-  const [shipments, setShipments] = useState<any[]>([])
+}: Props) {
+  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  async function loadData() {
+    setLoading(true);
 
-  const fetchData = async () => {
-    const { data, error } = await supabase
-      .from('shipments')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let query = supabase.from("shipments").select("*").order("id", {
+      ascending: false,
+    });
 
-    if (!error) setShipments(data || [])
+    // Search filter
+    if (searchQuery) {
+      query = query.ilike("name", `%${searchQuery}%`);
+    }
+
+    // Status filter
+    if (statusFilter) {
+      query = query.eq("status", statusFilter);
+    }
+
+    const { data, error } = await query;
+
+    if (!error && data) {
+      setShipments(data);
+    }
+
+    setLoading(false);
   }
 
-  const filtered = shipments.filter((item) => {
-    const matchSearch =
-      item.tracking_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.destination?.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    loadData();
+  }, [searchQuery, statusFilter]);
 
-    const matchStatus =
-      statusFilter === 'all' || item.status === statusFilter
-
-    return matchSearch && matchStatus
-  })
+  if (loading) return <p>Loading...</p>;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border">
+    <div className="overflow-x-auto border rounded-md">
+      <table className="w-full text-sm">
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-3 border">Tracking</th>
-            <th className="p-3 border">Destination</th>
-            <th className="p-3 border">Status</th>
-            <th className="p-3 border">Action</th>
+            <th className="p-2">ID</th>
+            <th className="p-2">Name</th>
+            <th className="p-2">Origin</th>
+            <th className="p-2">Destination</th>
+            <th className="p-2">Status</th>
+            <th className="p-2">Created</th>
           </tr>
         </thead>
         <tbody>
-          {filtered.map((shipment) => (
-            <tr key={shipment.id} className="border">
-              <td className="p-3 border">{shipment.tracking_number}</td>
-              <td className="p-3 border">{shipment.destination}</td>
-              <td className="p-3 border">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 size={16} /> {shipment.status}
-                </span>
-              </td>
-              <td className="p-3 border">
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => onEdit(shipment)}>
-                    <Edit2 size={16} />
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => openConfirmModal(shipment)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </td>
+          {shipments.map((s) => (
+            <tr key={s.id} className="border-t">
+              <td className="p-2">{s.id}</td>
+              <td className="p-2">{s.name}</td>
+              <td className="p-2">{s.origin}</td>
+              <td className="p-2">{s.destination}</td>
+              <td className="p-2">{s.status}</td>
+              <td className="p-2">{new Date(s.created_at).toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  )
+  );
 }
