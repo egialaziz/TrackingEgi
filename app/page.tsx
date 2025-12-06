@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Edit2, X, Download, Search } from 'lucide-react'
+import { Plus, Trash2, Edit2, X, Download, Search, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import ShipmentForm from '@/components/shipment-form'
@@ -124,55 +124,188 @@ export default function Page() {
     return matchesSearch && matchesStatus
   })
 
-  const exportToExcel = () => {
-    const headers = ['Deskripsi', 'Qty', 'Penerima', 'PO', 'Branch', 'Tgl Kirim', 'Status', 'Tgl Konfirmasi', 'Konfirmasi Oleh', 'No Resi']
-    
-    const rows = filteredShipments.map(shipment => [
-      shipment.description,
-      shipment.qty,
-      shipment.penerima,
-      shipment.po,
-      shipment.branch,
-      shipment.tglKirim,
-      shipment.status === 'confirmed' ? 'Dikonfirmasi' : shipment.status === 'rejected' ? 'Ditolak' : 'Pending',
-      shipment.confirmedDate || '-',
-      shipment.confirmedBy || '-',
-      shipment.noResi || '-'
-    ])
+  const exportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx')
+      
+      const headers = ['Deskripsi', 'Qty', 'Penerima', 'PO', 'Branch', 'Tgl Kirim', 'Status', 'Tgl Konfirmasi', 'Konfirmasi Oleh', 'No Resi']
+      
+      const rows = filteredShipments.map(shipment => [
+        shipment.description,
+        shipment.qty,
+        shipment.penerima,
+        shipment.po,
+        shipment.branch,
+        shipment.tglKirim,
+        shipment.status === 'confirmed' ? 'Dikonfirmasi' : shipment.status === 'rejected' ? 'Ditolak' : 'Pending',
+        shipment.confirmedDate || '',
+        shipment.confirmedBy || '',
+        shipment.noResi || ''
+      ])
 
-    let csv = headers.join('\t') + '\n'
-    rows.forEach(row => {
-      csv += row.join('\t') + '\n'
-    })
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+      
+      ws['!cols'] = [
+        { wch: 25 },
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 18 }
+      ]
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    
-    link.setAttribute('href', url)
-    link.setAttribute('download', `pengiriman-${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      XLSX.utils.book_append_sheet(wb, ws, 'Pengiriman')
+      
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([wbout], { type: 'application/octet-stream' })
+      
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `pengiriman-${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(link.href)
+    } catch (error) {
+      console.error('Error exporting to Excel:', error)
+      alert('Gagal mengekspor ke Excel. Mencoba dengan CSV...')
+      
+      const headers = ['Deskripsi', 'Qty', 'Penerima', 'PO', 'Branch', 'Tgl Kirim', 'Status', 'Tgl Konfirmasi', 'Konfirmasi Oleh', 'No Resi']
+      
+      const rows = filteredShipments.map(shipment => [
+        shipment.description,
+        shipment.qty,
+        shipment.penerima,
+        shipment.po,
+        shipment.branch,
+        shipment.tglKirim,
+        shipment.status === 'confirmed' ? 'Dikonfirmasi' : shipment.status === 'rejected' ? 'Ditolak' : 'Pending',
+        shipment.confirmedDate || '-',
+        shipment.confirmedBy || '-',
+        shipment.noResi || '-'
+      ])
+
+      let csv = headers.join(',') + '\n'
+      rows.forEach(row => {
+        csv += row.map(cell => `"${cell}"`).join(',') + '\n'
+      })
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', `pengiriman-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+  }
+
+  const downloadTemplate = async () => {
+    try {
+      const XLSX = await import('xlsx')
+      
+      const headers = ['Deskripsi', 'Qty', 'Penerima', 'PO', 'Tanggal Kirim', 'Branch']
+      const sampleData = [
+        ['Produk A - Bahan Baku', 100, 'PT. Maju Jaya', 'PO-2025-001', '2025-01-15', 'Jakarta'],
+        ['Produk B - Material', 50, 'PT. Mitra Baik', 'PO-2025-002', '2025-01-16', 'Surabaya'],
+      ]
+
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData])
+      
+      ws['!cols'] = [
+        { wch: 25 },
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 }
+      ]
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Template')
+      
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([wbout], { type: 'application/octet-stream' })
+      
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = 'template-pengiriman.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(link.href)
+    } catch (error) {
+      console.error('Error downloading template:', error)
+      alert('Gagal membuat template. Silakan coba lagi.')
+    }
+  }
+
+  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const XLSX = await import('xlsx')
+      const reader = new FileReader()
+
+      reader.onload = (e) => {
+        const data = e.target?.result
+        const workbook = XLSX.read(data, { type: 'binary' })
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[]
+
+        const newShipments: Shipment[] = jsonData
+          .filter(row => row['Deskripsi'] && row['Qty'])
+          .map(row => ({
+            id: Date.now().toString() + Math.random(),
+            description: row['Deskripsi']?.toString() || '',
+            qty: parseInt(row['Qty']) || 0,
+            penerima: row['Penerima']?.toString() || '',
+            po: row['PO']?.toString() || '',
+            tglKirim: row['Tanggal Kirim']?.toString() || new Date().toISOString().split('T')[0],
+            branch: row['Branch']?.toString() || '',
+            status: 'pending' as const
+          }))
+
+        if (newShipments.length > 0) {
+          setShipments(prev => [...newShipments, ...prev])
+          alert(`Berhasil import ${newShipments.length} data pengiriman`)
+        } else {
+          alert('Tidak ada data valid untuk diimport')
+        }
+      }
+
+      reader.readAsBinaryString(file)
+    } catch (error) {
+      console.error('Error importing Excel:', error)
+      alert('Gagal mengimport file Excel')
+    }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold">📦</span>
           </div>
-          Tracking Pengiriman Egi
+          Tracking Pengiriman
         </h1>
-        <p className="text-slate-400">Kelola dan pantau semua pengiriman Egi</p>
+        <p className="text-slate-400">Kelola dan pantau semua pengiriman Anda</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
         <div className="lg:col-span-2">
           {showForm && (
             <Card className="border-slate-700 bg-slate-800/50 backdrop-blur mb-6">
@@ -238,13 +371,34 @@ export default function Page() {
                     </button>
                   ))}
                   
-                  <button
-                    onClick={exportToExcel}
-                    className="ml-auto px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition flex items-center gap-2"
-                  >
-                    <Download size={18} />
-                    Export Excel
-                  </button>
+                  <div className="ml-auto flex gap-2">
+                    <label className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white rounded-lg font-medium transition flex items-center gap-2 cursor-pointer">
+                      <Upload size={18} />
+                      Import Excel
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={handleImportExcel}
+                        className="hidden"
+                      />
+                    </label>
+
+                    <button
+                      onClick={downloadTemplate}
+                      className="px-4 py-2 bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white rounded-lg font-medium transition flex items-center gap-2"
+                    >
+                      <Download size={18} />
+                      Template
+                    </button>
+                    
+                    <button
+                      onClick={exportToExcel}
+                      className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg font-medium transition flex items-center gap-2"
+                    >
+                      <Download size={18} />
+                      Export Excel
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -261,7 +415,7 @@ export default function Page() {
                   <div className="text-6xl mb-4">📭</div>
                   <p className="text-slate-400">Belum ada data pengiriman</p>
                   <p className="text-slate-500 text-sm mt-2">
-                    Klik tombol "Tambah Pengiriman" untuk memulai
+                    Klik tombol "Tambah Pengiriman" untuk memulai atau gunakan "Import Excel"
                   </p>
                 </div>
               )}
@@ -269,7 +423,6 @@ export default function Page() {
           </Card>
         </div>
 
-        {/* Statistics Sidebar */}
         <div className="space-y-4">
           <Card className="border-slate-700 bg-slate-800/50 backdrop-blur p-6">
             <div className="text-slate-400 text-sm font-medium mb-2">Total Pengiriman</div>
