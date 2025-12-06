@@ -1,9 +1,8 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { Edit2, Trash2, CheckCircle2, Circle, XCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import type { Shipment } from '@/app/page'
+import { useState } from "react"
+import { CheckCircle2, Circle, XCircle } from "lucide-react"
+import type { Shipment } from "@/lib/supabase"
 
 interface ShipmentTableProps {
   shipments: Shipment[]
@@ -13,37 +12,31 @@ interface ShipmentTableProps {
   onReject: (id: string) => void
 }
 
-export default function ShipmentTable({
-  shipments,
-  onEdit,
-  onDelete,
-  onConfirm,
-  onReject
-}: ShipmentTableProps) {
+export default function ShipmentTable({ shipments, onEdit, onDelete, onConfirm, onReject }: ShipmentTableProps) {
   const [confirmModal, setConfirmModal] = useState<{ shipmentId: string } | null>(null)
-  const [confirmedByName, setConfirmedByName] = useState('')
-  const [noResi, setNoResi] = useState('')
-  const [isToUser, setIsToUser] = useState(false) // added state to track "to user" option
+  const [confirmedByName, setConfirmedByName] = useState("")
+  const [noResi, setNoResi] = useState("")
+  const [isToUser, setIsToUser] = useState(false)
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
+    return date.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     })
   }
 
   const handleConfirmClick = (shipmentId: string) => {
     setConfirmModal({ shipmentId })
-    setConfirmedByName('')
-    setNoResi('')
+    setConfirmedByName("")
+    setNoResi("")
     setIsToUser(false)
   }
 
   const handleConfirmSubmit = () => {
     if (!confirmedByName.trim()) {
-      alert('Nama pihak yang mengkonfirmasi harus diisi')
+      alert("Nama pihak yang mengkonfirmasi harus diisi")
       return
     }
     if (!isToUser && !noResi.trim()) {
@@ -53,8 +46,8 @@ export default function ShipmentTable({
     if (confirmModal) {
       onConfirm(confirmModal.shipmentId, confirmedByName, noResi, isToUser)
       setConfirmModal(null)
-      setConfirmedByName('')
-      setNoResi('')
+      setConfirmedByName("")
+      setNoResi("")
       setIsToUser(false)
     }
   }
@@ -72,9 +65,15 @@ export default function ShipmentTable({
               <th className="px-4 py-3 text-left font-semibold text-slate-200">Branch</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-200">Tgl Kirim</th>
               <th className="px-4 py-3 text-left font-semibold text-slate-200">Status</th>
-              <th className="px-4 py-3 text-left font-semibold text-slate-200">Tgl Konfirmasi</th>
-              <th className="px-4 py-3 text-left font-semibold text-slate-200">Konfirmasi Oleh</th>
-              <th className="px-4 py-3 text-left font-semibold text-slate-200">No Resi</th>
+              {shipments.some((shipment) => shipment.confirmed_at) && (
+                <th className="px-4 py-3 text-left font-semibold text-slate-200">Tgl Konfirmasi</th>
+              )}
+              {shipments.some((shipment) => shipment.confirmed_by) && (
+                <th className="px-4 py-3 text-left font-semibold text-slate-200">Konfirmasi Oleh</th>
+              )}
+              {shipments.some((shipment) => shipment.no_resi) && (
+                <th className="px-4 py-3 text-left font-semibold text-slate-200">No Resi</th>
+              )}
               <th className="px-4 py-3 text-left font-semibold text-slate-200">Aksi</th>
             </tr>
           </thead>
@@ -83,10 +82,10 @@ export default function ShipmentTable({
               <tr
                 key={shipment.id}
                 className={`border-b border-slate-700 hover:bg-slate-700/30 transition ${
-                  index % 2 === 0 ? 'bg-slate-800/30' : 'bg-slate-800/10'
-                } ${shipment.status === 'confirmed' ? 'opacity-75' : ''}`}
+                  index % 2 === 0 ? "bg-slate-800/30" : "bg-slate-800/10"
+                } ${shipment.status === "confirmed" ? "opacity-75" : ""}`}
               >
-                <td className="px-4 py-3 text-slate-100 font-medium">{shipment.description}</td>
+                <td className="px-4 py-3 text-slate-100 font-medium">{shipment.deskripsi}</td>
                 <td className="px-4 py-3 text-slate-100">
                   <span className="bg-blue-500/20 text-blue-300 px-2 py-1 rounded text-xs font-medium">
                     {shipment.qty}
@@ -103,61 +102,59 @@ export default function ShipmentTable({
                     {shipment.branch}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-100">{formatDate(shipment.tglKirim)}</td>
+                <td className="px-4 py-3 text-slate-100">{formatDate(shipment.tanggal_kirim)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 text-xs font-medium">
-                    {shipment.status === 'confirmed' ? (
+                    {shipment.status === "confirmed" ? (
                       <>
                         <CheckCircle2 size={16} className="text-emerald-400" />
-                        <span className="text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded">
-                          Dikonfirmasi
-                        </span>
+                        <span className="text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded">Dikonfirmasi</span>
                       </>
-                    ) : shipment.status === 'rejected' ? (
+                    ) : shipment.status === "rejected" ? (
                       <>
                         <XCircle size={16} className="text-red-400" />
-                        <span className="text-red-300 bg-red-500/20 px-2 py-1 rounded">
-                          Ditolak
-                        </span>
+                        <span className="text-red-300 bg-red-500/20 px-2 py-1 rounded">Ditolak</span>
                       </>
                     ) : (
                       <>
                         <Circle size={16} className="text-slate-500" />
-                        <span className="text-slate-300 bg-slate-600/20 px-2 py-1 rounded">
-                          Pending
-                        </span>
+                        <span className="text-slate-300 bg-slate-600/20 px-2 py-1 rounded">Pending</span>
                       </>
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-slate-100">
-                  {shipment.confirmedDate ? (
-                    <span className="text-emerald-300 font-medium">
-                      {formatDate(shipment.confirmedDate)}
-                    </span>
-                  ) : (
-                    <span className="text-slate-500">-</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-slate-100">
-                  {shipment.confirmedBy ? (
-                    <span className="text-blue-300 font-medium">{shipment.confirmedBy}</span>
-                  ) : (
-                    <span className="text-slate-500">-</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-slate-100">
-                  {shipment.noResi ? (
-                    <span className="text-amber-300 font-medium bg-amber-500/20 px-2 py-1 rounded text-xs">
-                      {shipment.noResi}
-                    </span>
-                  ) : (
-                    <span className="text-slate-500">-</span>
-                  )}
-                </td>
+                {shipments.some((shipment) => shipment.confirmed_at) && (
+                  <td className="px-4 py-3 text-slate-100">
+                    {shipment.confirmed_at ? (
+                      <span className="text-emerald-300 font-medium">{formatDate(shipment.confirmed_at)}</span>
+                    ) : (
+                      <span className="text-slate-500">-</span>
+                    )}
+                  </td>
+                )}
+                {shipments.some((shipment) => shipment.confirmed_by) && (
+                  <td className="px-4 py-3 text-slate-100">
+                    {shipment.confirmed_by ? (
+                      <span className="text-blue-300 font-medium">{shipment.confirmed_by}</span>
+                    ) : (
+                      <span className="text-slate-500">-</span>
+                    )}
+                  </td>
+                )}
+                {shipments.some((shipment) => shipment.no_resi) && (
+                  <td className="px-4 py-3 text-slate-100">
+                    {shipment.no_resi ? (
+                      <span className="text-amber-300 font-medium bg-amber-500/20 px-2 py-1 rounded text-xs">
+                        {shipment.no_resi}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">-</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    {shipment.status === 'pending' ? (
+                    {shipment.status === "pending" ? (
                       <>
                         <button
                           onClick={() => handleConfirmClick(shipment.id)}
@@ -205,7 +202,7 @@ export default function ShipmentTable({
               className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition mb-3"
               autoFocus
             />
-            
+
             <div className="mb-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -226,19 +223,19 @@ export default function ShipmentTable({
                 placeholder="No Resi pengiriman..."
                 className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition mb-4"
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleConfirmSubmit()
                   }
                 }}
               />
             )}
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => {
                   setConfirmModal(null)
-                  setConfirmedByName('')
-                  setNoResi('')
+                  setConfirmedByName("")
+                  setNoResi("")
                   setIsToUser(false)
                 }}
                 className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition"

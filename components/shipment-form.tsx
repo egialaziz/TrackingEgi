@@ -1,25 +1,25 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import type { Shipment } from '@/app/page'
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import type { Shipment } from "@/lib/supabase"
 
 interface ShipmentFormProps {
-  onSubmit: (data: Omit<Shipment, 'id'>) => void
+  onSubmit: (data: Omit<Shipment, "id" | "created_at" | "updated_at">) => void
   initialData?: Shipment
 }
 
 export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProps) {
   const [formData, setFormData] = useState({
-    description: '',
-    qty: '',
-    penerima: '',
-    po: '',
-    tglKirim: '',
-    branch: '',
-    status: 'pending' as const,
-    confirmedBy: '',
-    noResi: ''
+    deskripsi: "",
+    qty: "",
+    penerima: "",
+    po: "",
+    tanggal_kirim: "",
+    branch: "",
+    status: "pending" as const,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -27,15 +27,13 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
   useEffect(() => {
     if (initialData) {
       setFormData({
-        description: initialData.description,
+        deskripsi: initialData.deskripsi,
         qty: initialData.qty.toString(),
         penerima: initialData.penerima,
         po: initialData.po,
-        tglKirim: initialData.tglKirim,
+        tanggal_kirim: initialData.tanggal_kirim,
         branch: initialData.branch,
         status: initialData.status,
-        confirmedBy: initialData.confirmedBy || '',
-        noResi: initialData.noResi || ''
       })
     }
   }, [initialData])
@@ -43,12 +41,12 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.description.trim()) newErrors.description = 'Deskripsi diperlukan'
-    if (!formData.qty || parseInt(formData.qty) <= 0) newErrors.qty = 'Qty harus lebih dari 0'
-    if (!formData.penerima.trim()) newErrors.penerima = 'Penerima diperlukan'
-    if (!formData.po.trim()) newErrors.po = 'PO diperlukan'
-    if (!formData.tglKirim) newErrors.tglKirim = 'Tanggal Kirim diperlukan'
-    if (!formData.branch.trim()) newErrors.branch = 'Branch diperlukan'
+    if (!formData.deskripsi.trim()) newErrors.deskripsi = "Deskripsi diperlukan"
+    if (!formData.qty || Number.parseInt(formData.qty) <= 0) newErrors.qty = "Qty harus lebih dari 0"
+    if (!formData.penerima.trim()) newErrors.penerima = "Penerima diperlukan"
+    if (!formData.po.trim()) newErrors.po = "PO diperlukan"
+    if (!formData.tanggal_kirim) newErrors.tanggal_kirim = "Tanggal Kirim diperlukan"
+    if (!formData.branch.trim()) newErrors.branch = "Branch diperlukan"
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -60,41 +58,37 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
     if (!validateForm()) return
 
     onSubmit({
-      description: formData.description,
-      qty: parseInt(formData.qty),
+      deskripsi: formData.deskripsi,
+      qty: Number.parseInt(formData.qty),
       penerima: formData.penerima,
       po: formData.po,
-      tglKirim: formData.tglKirim,
+      tanggal_kirim: formData.tanggal_kirim,
       branch: formData.branch,
       status: formData.status,
-      confirmedBy: formData.confirmedBy || undefined,
-      noResi: formData.noResi || undefined
     })
 
     setFormData({
-      description: '',
-      qty: '',
-      penerima: '',
-      po: '',
-      tglKirim: '',
-      branch: '',
-      status: 'pending',
-      confirmedBy: '',
-      noResi: ''
+      deskripsi: "",
+      qty: "",
+      penerima: "",
+      po: "",
+      tanggal_kirim: "",
+      branch: "",
+      status: "pending",
     })
     setErrors({})
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }))
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }))
     }
   }
@@ -103,24 +97,20 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Deskripsi
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Deskripsi</label>
           <input
             type="text"
-            name="description"
-            value={formData.description}
+            name="deskripsi"
+            value={formData.deskripsi}
             onChange={handleChange}
             placeholder="Contoh: Produk A - Bahan Baku Berkualitas"
             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition"
           />
-          {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+          {errors.deskripsi && <p className="text-red-500 text-xs mt-1">{errors.deskripsi}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Qty
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Qty</label>
           <input
             type="number"
             name="qty"
@@ -133,9 +123,7 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Penerima
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Penerima</label>
           <input
             type="text"
             name="penerima"
@@ -148,9 +136,7 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            PO
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">PO</label>
           <input
             type="text"
             name="po"
@@ -163,23 +149,19 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Tanggal Kirim
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Tanggal Kirim</label>
           <input
             type="date"
-            name="tglKirim"
-            value={formData.tglKirim}
+            name="tanggal_kirim"
+            value={formData.tanggal_kirim}
             onChange={handleChange}
             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-orange-500 transition"
           />
-          {errors.tglKirim && <p className="text-red-500 text-xs mt-1">{errors.tglKirim}</p>}
+          {errors.tanggal_kirim && <p className="text-red-500 text-xs mt-1">{errors.tanggal_kirim}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Branch
-          </label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Branch</label>
           <input
             type="text"
             name="branch"
@@ -192,56 +174,12 @@ export default function ShipmentForm({ onSubmit, initialData }: ShipmentFormProp
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          Nama Pihak yang Mengkonfirmasi (Opsional)
-        </label>
-        <input
-          type="text"
-          name="confirmedBy"
-          value={formData.confirmedBy}
-          onChange={handleChange}
-          placeholder="Nama orang yang mengkonfirmasi pengiriman"
-          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          No Resi (Opsional)
-        </label>
-        <input
-          type="text"
-          name="noResi"
-          value={formData.noResi}
-          onChange={handleChange}
-          placeholder="Nomor resi pengiriman"
-          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 transition"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          Status
-        </label>
-        <select
-          name="status"
-          value={formData.status}
-          onChange={handleChange}
-          className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-orange-500 transition"
-        >
-          <option value="pending">Pending</option>
-          <option value="confirmed">Dikonfirmasi</option>
-          <option value="rejected">Ditolak</option>
-        </select>
-      </div>
-
       <div className="flex gap-3 pt-2">
         <Button
           type="submit"
           className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
         >
-          {initialData ? 'Update Pengiriman' : 'Tambah Pengiriman'}
+          {initialData ? "Update Pengiriman" : "Tambah Pengiriman"}
         </Button>
       </div>
     </form>
