@@ -1,285 +1,123 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-import { useState, useEffect } from "react"
-import { Plus, Download, Search, Upload } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import ShipmentForm from "@/components/shipment-form"
-import ShipmentTable from "@/components/shipment-table"
-import { supabase, type Shipment } from "@/lib/supabase"
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export interface ShipmentData extends Omit<Shipment, "id" | "created_at" | "updated_at"> {}
+export default function AdminCataloguePage() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-export default function Page() {
-  const [shipments, setShipments] = useState<Shipment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingData, setEditingData] = useState<Shipment | null>(null)
-  const [confirmationModal, setConfirmationModal] = useState<{ shipmentId: string; shipmentInfo: any } | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "rejected">("all")
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+
+  const filtered = items.filter((item) => {
+    const s = search.toLowerCase();
+    return (
+      item.name?.toLowerCase().includes(s) ||
+      item.category?.toLowerCase().includes(s) ||
+      item.description?.toLowerCase().includes(s)
+    );
+  });
+
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const paginated = filtered.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
   useEffect(() => {
-    fetchShipments()
-  }, [])
-
-  const fetchShipments = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase.from("tracking").select("*").order("created_at", { ascending: false })
-
-      if (error) throw error
-      setShipments(data || [])
-    } catch (error) {
-      console.error("Error fetching shipments:", error)
-      alert("Gagal mengambil data pengiriman")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAddShipment = async (data: ShipmentData) => {
-    try {
-      if (editingId) {
-        const { error } = await supabase
-          .from("tracking")
-          .update({
-            ...data,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", editingId)
-
-        if (error) throw error
-        setEditingId(null)
-        setEditingData(null)
-      } else {
-        const { error } = await supabase.from("tracking").insert([
-          {
-            ...data,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ])
-
-        if (error) throw error
-      }
-      setShowForm(false)
-      await fetchShipments()
-    } catch (error) {
-      console.error("Error saving shipment:", error)
-      alert("Gagal menyimpan data pengiriman")
-    }
-  }
-
-  const handleEdit = (shipment: Shipment) => {
-    setEditingData(shipment)
-    setEditingId(shipment.id)
-    setShowForm(true)
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus data ini?")) return
-
-    try {
-      const { error } = await supabase.from("tracking").delete().eq("id", id)
-
-      if (error) throw error
-      await fetchShipments()
-    } catch (error) {
-      console.error("Error deleting shipment:", error)
-      alert("Gagal menghapus data pengiriman")
-    }
-  }
-
-  const handleConfirmShipment = async (shipmentId: string, confirmedBy: string, noResi: string, toUser: boolean) => {
-    try {
-      const updatedShipment = shipments.find((s) => s.id === shipmentId)
-      if (updatedShipment) {
-        const today = new Date().toISOString().split("T")[0]
-        setConfirmationModal({
-          shipmentId,
-          shipmentInfo: {
-            ...updatedShipment,
-            confirmed_at: today,
-            confirmed_by: confirmedBy,
-            no_resi: toUser ? "Serah ke User" : noResi,
-          },
-        })
-      }
-    } catch (error) {
-      console.error("Error confirming shipment:", error)
-      alert("Gagal mengkonfirmasi pengiriman")
-    }
-  }
-
-  const handleRejectShipment = async () => {
-    await fetchShipments()
-  }
-
-  const handleCloseForm = () => {
-    setShowForm(false)
-    setEditingId(null)
-    setEditingData(null)
-  }
-
-  /** -------------------------------
-   *  FIX FILTER BIKIN ERROR!
-   --------------------------------*/
-  const safe = (v: any) => (v ? v.toString().toLowerCase() : "")
-
-  const filteredShipments = shipments.filter((shipment) => {
-    const matchesSearch =
-      safe(shipment.deskripsi).includes(searchQuery.toLowerCase()) ||
-      safe(shipment.penerima).includes(searchQuery.toLowerCase()) ||
-      safe(shipment.po).includes(searchQuery.toLowerCase()) ||
-      safe(shipment.branch).includes(searchQuery.toLowerCase())
-
-    const matchesFilter = statusFilter === "all" || shipment.status === statusFilter
-    return matchesSearch && matchesFilter
-  })
-
-  const stats = {
-    total: shipments.length,
-    pending: shipments.filter((s) => s.status === "pending").length,
-    confirmed: shipments.filter((s) => s.status === "confirmed").length,
-    rejected: shipments.filter((s) => s.status === "rejected").length,
-    totalQty: shipments.reduce((sum, s) => sum + s.qty, 0),
-  }
-
-  /** -------------------------------
-   *  TEMPLATE EXCEL
-   --------------------------------*/
-  const downloadTemplate = async () => {
-    try {
-      const XLSX = await import("xlsx")
-      const templateData = [
-        {
-          Deskripsi: "Contoh: Produk A",
-          Qty: 100,
-          Penerima: "PT. Maju Jaya",
-          PO: "PO-2025-001",
-          "Tanggal Kirim": "2025-01-15",
-          Branch: "Jakarta",
-        },
-      ]
-
-      const ws = XLSX.utils.json_to_sheet(templateData)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, "Template")
-
-      const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([buf], { type: "application/octet-stream" })
-
-      const link = document.createElement("a")
-      link.href = URL.createObjectURL(blob)
-      link.download = "template-tracking.xlsx"
-      link.click()
-    } catch (e) {
-      console.error(e)
-      alert("Gagal download template")
-    }
-  }
-
-  /** -------------------------------
-   *  EXPORT EXCEL
-   --------------------------------*/
-  const downloadExcel = async () => {
-    try {
-      const XLSX = await import("xlsx")
-      const exportData = filteredShipments.map((s) => ({
-        Deskripsi: s.deskripsi,
-        Qty: s.qty,
-        Penerima: s.penerima,
-        PO: s.po,
-        "Tanggal Kirim": s.tanggal_kirim,
-        Branch: s.branch,
-        Status: s.status || "-",
-        "Tgl Konfirmasi": s.confirmed_at || "-",
-        "Konfirmasi Oleh": s.confirmed_by || "-",
-        "No Resi": s.no_resi || "-",
-      }))
-
-      const ws = XLSX.utils.json_to_sheet(exportData)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, "Tracking")
-
-      const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([buf], { type: "application/octet-stream" })
-
-      const link = document.createElement("a")
-      link.href = URL.createObjectURL(blob)
-      link.download = "data-tracking.xlsx"
-      link.click()
-    } catch (e) {
-      console.error(e)
-      alert("Gagal export data")
-    }
-  }
-
-  /** -------------------------------
-   *  IMPORT EXCEL
-   --------------------------------*/
-  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    try {
-      const XLSX = await import("xlsx")
-      const reader = new FileReader()
-
-      reader.onload = async (e) => {
-        const workbook = XLSX.read(e.target?.result, { type: "binary" })
-        const sheetName = workbook.SheetNames[0]
-        const sheet = workbook.Sheets[sheetName]
-        const rows = XLSX.utils.sheet_to_json(sheet)
-
-        const parsed: ShipmentData[] = rows.map((row: any) => ({
-          deskripsi: row["Deskripsi"] || "",
-          qty: Number(row["Qty"]) || 0,
-          penerima: row["Penerima"] || "",
-          po: row["PO"] || "",
-          tanggal_kirim: row["Tanggal Kirim"] || "",
-          branch: row["Branch"] || "",
-          status: "pending",
-        }))
-
-        const { error } = await supabase.from("tracking").insert(
-          parsed.map((p) => ({
-            ...p,
-            created_at: new Date().toISOString(),
-          })),
-        )
-
-        if (error) throw error
-        fetchShipments()
-        alert("Import berhasil!")
-      }
-
-      reader.readAsBinaryString(file)
-    } catch (e) {
-      console.error(e)
-      alert("Gagal import file")
-    }
-  }
+    const load = async () => {
+      const { data, error } = await supabase.from("UserCatalogue").select("*");
+      if (!error && data) setItems(data);
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Admin Catalogue</h1>
+        <Link href="/admin/upload">
+          <Button>Tambah Item</Button>
+        </Link>
+      </div>
 
-        {/* THE REST OF YOUR UI IS THE SAME */}
+      {/* Search */}
+      <Input
+        placeholder="Search..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full max-w-md"
+      />
 
-        <ShipmentTable
-          shipments={filteredShipments}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onConfirm={handleConfirmShipment}
-          onReject={handleRejectShipment}
-        />
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 border">Photo</th>
+                <th className="p-2 border">Name</th>
+                <th className="p-2 border">Category</th>
+                <th className="p-2 border">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginated.map((item, i) => (
+                <tr key={i} className="border">
+                  <td className="p-2 border text-center">
+                    {item.photo ? (
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/Pic/${item.photo}`}
+                        alt="photo"
+                        className="h-16 w-16 object-cover mx-auto rounded"
+                      />
+                    ) : (
+                      <span className="text-gray-400">No Image</span>
+                    )}
+                  </td>
+                  <td className="p-2 border">{item.name}</td>
+                  <td className="p-2 border">{item.category}</td>
+                  <td className="p-2 border">{item.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
+      {/* Pagination Controls */}
+      <div className="flex gap-2 items-center justify-center mt-4">
+        <Button
+          variant="outline"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage(currentPage - 1)}
+        >
+          Prev
+        </Button>
+        <span>
+          Page {currentPage} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage(currentPage + 1)}
+        >
+          Next
+        </Button>
       </div>
     </div>
-  )
+  );
 }
