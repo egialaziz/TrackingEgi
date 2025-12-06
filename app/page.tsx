@@ -1,73 +1,51 @@
-Skip to content
-Egi's projects
-Egi's projects
+              onDelete={handleDelete}
+              onConfirm={handleConfirmShipment}
+              onReject={handleRejectShipment}
+            />
+          </Card>
+        )}
 
-Hobby
-
-tracking-egi
-
-ELykeBPEh
-
-
-Find…
-F
-
-Source
-Output
-app/page.tsx
-
-"use client"
-
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Plus, Download, Search, Upload } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import ShipmentForm from "@/components/shipment-form"
-import ShipmentTable from "@/components/shipment-table"
-import { supabase, type Shipment } from "@/lib/supabase"
-
-export interface ShipmentData extends Omit<Shipment, "id" | "created_at" | "updated_at"> {}
-
-export default function Page() {
-  const [shipments, setShipments] = useState<Shipment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingData, setEditingData] = useState<Shipment | null>(null)
-  const [confirmationModal, setConfirmationModal] = useState<{ shipmentId: string; shipmentInfo: any } | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "rejected">("all")
-
-  useEffect(() => {
-    fetchShipments()
-  }, [])
-
-  const fetchShipments = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase.from("tracking").select("*").order("created_at", { ascending: false })
-
-      if (error) throw error
-      setShipments(data || [])
-    } catch (error) {
-      console.error("Error fetching shipments:", error)
-      alert("Gagal mengambil data pengiriman")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAddShipment = async (data: ShipmentData) => {
-    try {
-      if (editingId) {
-        const { error } = await supabase
-          .from("tracking")
-          .update({
-            ...data,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", editingId)
-tracking-egi – Deployment Source – Vercel
-17:32:10
+        {confirmationModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="bg-slate-800 border-slate-700 max-w-md w-full">
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">Pengiriman Dikonfirmasi</h2>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Tanggal Konfirmasi:{" "}
+                    <span className="font-semibold text-emerald-300">
+                      {confirmationModal.shipmentInfo?.confirmed_at}
+                    </span>
+                  </p>
+                  <p className="text-slate-400 text-sm mb-2">
+                    Dikonfirmasi oleh:{" "}
+                    <span className="font-semibold text-blue-300">{confirmationModal.shipmentInfo?.confirmed_by}</span>
+                  </p>
+                  <p className="text-slate-400 text-sm">
+                    No Resi:{" "}
+                    <span className="font-semibold text-amber-300">{confirmationModal.shipmentInfo?.no_resi}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setConfirmationModal(null)}
+                  className="w-full px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg font-medium transition"
+                >
+                  Tutup
+                </button>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
