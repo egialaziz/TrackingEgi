@@ -1,42 +1,41 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import ShipmentTableSupabase from '@/components/shipment-table-supabase'
+import { useState } from "react";
+import ShipmentTableSupabase from "@/components/shipment-table-supabase";
 
 export default function HomePage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Shipment Tracking</h1>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <h1 className="text-3xl font-bold">Shipment List</h1>
 
-      <div className="flex gap-3 mb-6">
-        <input
-          className="border px-3 py-2 rounded w-full"
-          placeholder="Search tracking number / destination..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search..."
+        className="border p-2 w-full rounded"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
 
-        <select
-          className="border px-3 py-2 rounded"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All</option>
-          <option value="pending">Pending</option>
-          <option value="on_delivery">On Delivery</option>
-          <option value="delivered">Delivered</option>
-        </select>
-      </div>
+      {/* Status Filter */}
+      <select
+        className="border p-2 rounded"
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+      >
+        <option value="">All Status</option>
+        <option value="Pending">Pending</option>
+        <option value="On Process">On Process</option>
+        <option value="Completed">Completed</option>
+      </select>
 
       <ShipmentTableSupabase
         searchQuery={searchQuery}
         statusFilter={statusFilter}
-        onEdit={() => {}}
-        openConfirmModal={() => {}}
       />
     </div>
-  )
+  );
 }
